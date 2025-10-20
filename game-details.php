@@ -51,8 +51,8 @@ if(!$gameDetails) {
                 </div>
                 <div class="game-details-info">
                     <h1><?php echo $gameDetails['title']; ?></h1>
-                    <p class="game-category">Category: <span><?php echo ucfirst($gameDetails['category']); ?></span></p>
-                    <p class="game-price">$<?php echo $gameDetails['price']; ?></p>
+                    <p class="game-category">Category: <span><?php echo ucfirst($gameDetails['category_id']); ?></span></p>
+                    <p class="game-price">₹<?php echo $gameDetails['price']; ?></p>
                     <div class="game-description">
                         <h3>Description</h3>
                         <p><?php echo $gameDetails['description']; ?></p>

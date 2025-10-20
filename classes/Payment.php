@@ -20,17 +20,21 @@ class Payment {
     
     // Process payment
     public function processPayment() {
-        // Query to insert new payment
-        $query = "INSERT INTO " . $this->table_name . " 
-                  SET user_id = :user_id, 
-                      order_id = :order_id, 
-                      amount = :amount, 
-                      payment_method = :payment_method, 
-                      transaction_id = :transaction_id, 
-                      status = :status, 
-                      created = NOW()";
-        
-        // Prepare query
+        try {
+            // Query to insert new payment
+            $query = "INSERT INTO " . $this->table_name . " 
+                      SET user_id = :user_id, 
+                          order_id = :order_id, 
+                          amount = :amount, 
+                          payment_method = :payment_method, 
+                          transaction_id = :transaction_id, 
+                          status = :status, 
+                          created_at = NOW()";
+            
+            error_log("Processing payment: user_id = " . $this->user_id . ", order_id = " . $this->order_id . 
+                     ", amount = " . $this->amount . ", method = " . $this->payment_method);
+            
+            // Prepare query
         $stmt = $this->conn->prepare($query);
         
         // Sanitize inputs
@@ -51,10 +55,16 @@ class Payment {
         
         // Execute query
         if($stmt->execute()) {
+            error_log("Payment processed successfully");
             return true;
         }
         
+        error_log("Failed to process payment: " . implode(", ", $stmt->errorInfo()));
         return false;
+    } catch (Exception $e) {
+        error_log("Exception processing payment: " . $e->getMessage());
+        return false;
+    }
     }
     
     // Generate transaction ID

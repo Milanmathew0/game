@@ -3,7 +3,6 @@ session_start();
 require_once '../includes/config.php';
 require_once '../classes/Database.php';
 require_once '../classes/Admin.php';
-require_once '../classes/Game.php';
 require_once '../classes/Category.php';
 
 // Initialize database connection
@@ -12,7 +11,6 @@ $db = $database->getConnection();
 
 // Initialize objects
 $admin = new Admin($db);
-$game = new Game($db);
 $category = new Category($db);
 
 // Check if admin is logged in
@@ -24,20 +22,20 @@ if(!isset($_SESSION['admin_id'])) {
 // Get admin details
 $adminData = $admin->getAdminById($_SESSION['admin_id']);
 
-// Get all games
-$games = $game->getAllGames();
+// Get all categories
+$categories = $category->getAllCategories();
 
 $success = '';
 $error = '';
 
-// Handle game deletion
-if(isset($_POST['delete_game']) && isset($_POST['game_id'])) {
-    if($game->deleteGame($_POST['game_id'])) {
-        $success = "Game deleted successfully.";
-        // Refresh games list
-        $games = $game->getAllGames();
+// Handle category deletion
+if(isset($_POST['delete_category']) && isset($_POST['category_id'])) {
+    if($category->deleteCategory($_POST['category_id'])) {
+        $success = "Category deleted successfully.";
+        // Refresh categories list
+        $categories = $category->getAllCategories();
     } else {
-        $error = "Failed to delete game.";
+        $error = "Failed to delete category. Make sure it's not assigned to any games.";
     }
 }
 ?>
@@ -47,7 +45,7 @@ if(isset($_POST['delete_game']) && isset($_POST['game_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Games - GameStore Admin</title>
+    <title>Manage Categories - GameStore Admin</title>
     <link rel="stylesheet" href="../assets/css/style.css">
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
@@ -74,7 +72,7 @@ if(isset($_POST['delete_game']) && isset($_POST['game_id'])) {
                     <i class="fas fa-home"></i>
                     Dashboard
                 </a>
-                <a href="games.php" class="active">
+                <a href="games.php">
                     <i class="fas fa-gamepad"></i>
                     Games
                 </a>
@@ -86,7 +84,7 @@ if(isset($_POST['delete_game']) && isset($_POST['game_id'])) {
                     <i class="fas fa-users"></i>
                     Users
                 </a>
-                <a href="categories.php">
+                <a href="categories.php" class="active">
                     <i class="fas fa-tags"></i>
                     Categories
                 </a>
@@ -100,11 +98,11 @@ if(isset($_POST['delete_game']) && isset($_POST['game_id'])) {
         <!-- Admin Content -->
         <div class="admin-content">
             <div class="admin-header">
-                <h1>Manage Games</h1>
+                <h1>Manage Categories</h1>
                 <div class="admin-header-actions">
-                    <a href="game-form.php" class="btn btn-primary">
+                    <a href="category-form.php" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
-                        Add New Game
+                        Add New Category
                     </a>
                 </div>
             </div>
@@ -127,40 +125,26 @@ if(isset($_POST['delete_game']) && isset($_POST['game_id'])) {
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Image</th>
-                                <th>Title</th>
-                                <th>Price</th>
-                                <th>Category</th>
-                                <th>Featured</th>
+                                <th>Name</th>
+                                <th>Slug</th>
+                                <th>Description</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach($games as $gameItem): ?>
+                            <?php foreach($categories as $cat): ?>
                             <tr>
-                                <td><?php echo $gameItem['id']; ?></td>
-                                <td>
-                                    <img src="<?php echo $gameItem['image']; ?>" alt="<?php echo $gameItem['title']; ?>" class="game-thumb">
-                                </td>
-                                <td><?php echo $gameItem['title']; ?></td>
-                                <td>$<?php echo number_format($gameItem['price'], 2); ?></td>
-                                <td>
-                                    <?php echo $gameItem['category_name'] ? htmlspecialchars($gameItem['category_name']) : 'Uncategorized'; ?>
-                                </td>
-                                <td>
-                                    <?php if($gameItem['is_featured']): ?>
-                                        <span class="badge badge-success">Yes</span>
-                                    <?php else: ?>
-                                        <span class="badge badge-secondary">No</span>
-                                    <?php endif; ?>
-                                </td>
+                                <td><?php echo $cat['id']; ?></td>
+                                <td><?php echo $cat['name']; ?></td>
+                                <td><?php echo isset($cat['slug']) ? $cat['slug'] : '(auto-generated)'; ?></td>
+                                <td><?php echo $cat['description']; ?></td>
                                 <td class="actions">
-                                    <a href="game-form.php?id=<?php echo $gameItem['id']; ?>" class="btn btn-sm btn-info">
+                                    <a href="category-form.php?id=<?php echo $cat['id']; ?>" class="btn btn-sm btn-info">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form action="" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this game?');">
-                                        <input type="hidden" name="game_id" value="<?php echo $gameItem['id']; ?>">
-                                        <button type="submit" name="delete_game" class="btn btn-sm btn-danger">
+                                    <form action="" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this category? This will affect all associated games.');">
+                                        <input type="hidden" name="category_id" value="<?php echo $cat['id']; ?>">
+                                        <button type="submit" name="delete_category" class="btn btn-sm btn-danger">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </form>

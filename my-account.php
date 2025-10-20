@@ -1,10 +1,12 @@
 <?php
 session_start();
+
 require_once 'includes/config.php';
 require_once 'classes/Database.php';
 require_once 'classes/User.php';
 require_once 'classes/Order.php';
 require_once 'classes/Payment.php';
+require_once 'classes/Cart.php';
 
 // Initialize database connection
 $database = new Database();
@@ -14,11 +16,11 @@ $db = $database->getConnection();
 $user = new User($db);
 $order = new Order($db);
 $payment = new Payment($db);
+$cart = new Cart($db);
 
 // Check if user is logged in
 $isLoggedIn = isset($_SESSION['user_id']) ? true : false;
 
-// Redirect to login if not logged in
 if(!$isLoggedIn) {
     header("Location: login.php");
     exit();
@@ -26,11 +28,12 @@ if(!$isLoggedIn) {
 
 // Get user details
 $user->id = $_SESSION['user_id'];
-$userData = $user->getUserById();
+$userData = $user->getUserById($_SESSION['user_id']);
 
 // Get user orders
 $order->user_id = $_SESSION['user_id'];
-$userOrders = $order->getOrdersByUserId();
+$userOrders = $order->getOrdersByUserId($_SESSION['user_id']);
+
 ?>
 
 <!DOCTYPE html>

@@ -2,30 +2,36 @@
 session_start();
 require_once '../includes/config.php';
 require_once '../classes/Database.php';
-require_once '../classes/Game.php';
-require_once '../classes/User.php';
+require_once '../classes/Admin.php';
 require_once '../classes/Order.php';
-
-// Check if user is logged in as admin
-if(!isset($_SESSION['admin_id'])) {
-    header("Location: ../admin-login.php");
-    exit();
-}
+require_once '../classes/User.php';
+require_once '../classes/Game.php';
 
 // Initialize database connection
 $database = new Database();
 $db = $database->getConnection();
 
 // Initialize objects
-$game = new Game($db);
-$user = new User($db);
+$admin = new Admin($db);
 $order = new Order($db);
+$user = new User($db);
+$game = new Game($db);
 
-// Get counts for dashboard
-$gameCount = $game->getCount();
-$userCount = $user->getCount();
-$orderCount = $order->getCount();
-$revenueTotal = $order->getTotalRevenue();
+// Check if admin is logged in
+if(!isset($_SESSION['admin_id'])) {
+    header("Location: login.php");
+    exit();
+}
+
+// Get admin details
+$adminData = $admin->getAdminById($_SESSION['admin_id']);
+
+// Get statistics
+$recentOrders = $order->getRecentOrders(5);
+$orderStats = $order->getOrderStats();
+$totalUsers = $user->getTotalUsers();
+$totalGames = $game->getTotalGames();
+$totalRevenue = $order->getTotalRevenue();
 ?>
 
 <!DOCTYPE html>
@@ -33,263 +39,153 @@ $revenueTotal = $order->getTotalRevenue();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - <?php echo SITE_NAME; ?></title>
+    <title>Admin Dashboard - GameStore</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <style>
-        .admin-container {
-            padding: 20px;
-        }
-        
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-        }
-        
-        .admin-header h1 {
-            margin: 0;
-        }
-        
-        .admin-nav {
-            background-color: #333;
-            padding: 15px;
-            margin-bottom: 30px;
-        }
-        
-        .admin-nav ul {
-            display: flex;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-        
-        .admin-nav li {
-            margin-right: 20px;
-        }
-        
-        .admin-nav a {
-            color: #fff;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        
-        .admin-nav a:hover {
-            color: #3498db;
-        }
-        
-        .dashboard-stats {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .stat-card {
-            background-color: #fff;
-            border-radius: 5px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-        
-        .stat-card h3 {
-            margin-top: 0;
-            color: #333;
-        }
-        
-        .stat-card .number {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: #3498db;
-            margin: 10px 0;
-        }
-        
-        .stat-card .label {
-            color: #777;
-            font-size: 0.9rem;
-        }
-        
-        .recent-section {
-            background-color: #fff;
-            border-radius: 5px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-        }
-        
-        .recent-section h2 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: #333;
-        }
-        
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .admin-table th, .admin-table td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        
-        .admin-table th {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-        
-        .admin-table tr:hover {
-            background-color: #f9f9f9;
-        }
-        
-        .btn {
-            display: inline-block;
-            padding: 8px 15px;
-            background-color: #3498db;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            font-size: 14px;
-        }
-        
-        .btn-danger {
-            background-color: #e74c3c;
-        }
-        
-        .btn-success {
-            background-color: #2ecc71;
-        }
-        
-        .logout-btn {
-            background-color: #e74c3c;
-            color: #fff;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
     <div class="admin-container">
-        <div class="admin-header">
-            <h1>Admin Dashboard</h1>
-            <div>
-                <span>Welcome, <?php echo $_SESSION['admin_name']; ?></span>
-                <a href="../admin-logout.php" class="logout-btn">Logout</a>
-            </div>
-        </div>
-        
-        <div class="admin-nav">
-            <ul>
-                <li><a href="dashboard.php" class="active">Dashboard</a></li>
-                <li><a href="games.php">Games</a></li>
-                <li><a href="users.php">Users</a></li>
-                <li><a href="orders.php">Orders</a></li>
-                <li><a href="../index.php" target="_blank">View Site</a></li>
-            </ul>
-        </div>
-        
-        <div class="dashboard-stats">
-            <div class="stat-card">
-                <h3>Total Games</h3>
-                <div class="number"><?php echo $gameCount; ?></div>
-                <div class="label">Games in inventory</div>
+        <!-- Admin Sidebar -->
+        <div class="admin-sidebar">
+            <div class="admin-logo">
+                <i class="fas fa-gamepad"></i>
+                <span>GameStore Admin</span>
             </div>
             
-            <div class="stat-card">
-                <h3>Total Users</h3>
-                <div class="number"><?php echo $userCount; ?></div>
-                <div class="label">Registered users</div>
+            <div class="admin-user">
+                <i class="fas fa-user-circle"></i>
+                <div class="admin-user-info">
+                    <span class="admin-username"><?php echo $adminData['username']; ?></span>
+                    <span class="admin-role">Administrator</span>
+                </div>
             </div>
             
-            <div class="stat-card">
-                <h3>Total Orders</h3>
-                <div class="number"><?php echo $orderCount; ?></div>
-                <div class="label">Completed orders</div>
+            <nav class="admin-nav">
+                <a href="dashboard.php" class="active">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
+                <a href="games.php">
+                    <i class="fas fa-gamepad"></i>
+                    Games
+                </a>
+                <a href="orders.php">
+                    <i class="fas fa-shopping-cart"></i>
+                    Orders
+                </a>
+                <a href="users.php">
+                    <i class="fas fa-users"></i>
+                    Users
+                </a>
+                <a href="categories.php">
+                    <i class="fas fa-tags"></i>
+                    Categories
+                </a>
+                <a href="logout.php">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Logout
+                </a>
+            </nav>
+        </div>
+        
+        <!-- Admin Content -->
+        <div class="admin-content">
+            <div class="admin-header">
+                <h1>Dashboard</h1>
+                <div class="admin-header-actions">
+                    <a href="profile.php" class="btn btn-sm">
+                        <i class="fas fa-user"></i>
+                        Profile
+                    </a>
+                </div>
             </div>
             
-            <div class="stat-card">
-                <h3>Total Revenue</h3>
-                <div class="number">₹<?php echo number_format($revenueTotal, 2); ?></div>
-                <div class="label">Revenue generated</div>
+            <!-- Statistics Cards -->
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon bg-primary">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Total Orders</h3>
+                        <p><?php echo $orderStats['total_orders']; ?></p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon bg-success">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Revenue</h3>
+                        <p>$<?php echo number_format($totalRevenue, 2); ?></p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon bg-info">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Total Users</h3>
+                        <p><?php echo $totalUsers; ?></p>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon bg-warning">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Total Games</h3>
+                        <p><?php echo $totalGames; ?></p>
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        <div class="recent-section">
-            <h2>Recent Orders</h2>
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Order ID</th>
-                        <th>User</th>
-                        <th>Date</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $recentOrders = $order->getRecentOrders(5);
-                    if($recentOrders) {
-                        foreach($recentOrders as $order) {
-                            echo "<tr>";
-                            echo "<td>{$order['id']}</td>";
-                            echo "<td>{$order['user_name']}</td>";
-                            echo "<td>{$order['created_at']}</td>";
-                            echo "<td>₹" . number_format($order['total_amount'], 2) . "</td>";
-                            echo "<td>{$order['status']}</td>";
-                            echo "<td><a href='orders.php?view={$order['id']}' class='btn'>View</a></td>";
-                            echo "</tr>";
-                        }
-                    } else {
-                        echo "<tr><td colspan='6'>No recent orders found</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="recent-section">
-            <h2>Recent Games Added</h2>
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Title</th>
-                        <th>Price</th>
-                        <th>Category</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php
-                    $recentGames = $game->getRecentGames(5);
-                    if($recentGames) {
-                        foreach($recentGames as $game) {
-                            echo "<tr>";
-                            echo "<td>{$game['id']}</td>";
-                            echo "<td>{$game['title']}</td>";
-                            echo "<td>₹" . number_format($game['price'], 2) . "</td>";
-                            echo "<td>{$game['category']}</td>";
-                            echo "<td>
-                                    <a href='games.php?edit={$game['id']}' class='btn'>Edit</a>
-                                    <a href='games.php?delete={$game['id']}' class='btn btn-danger' onclick='return confirm(\"Are you sure?\")'>Delete</a>
-                                  </td>";
-                            echo "</tr>";
-                        }
-                    } else {
-                        echo "<tr><td colspan='5'>No games found</td></tr>";
-                    }
-                    ?>
-                </tbody>
-            </table>
+            
+            <!-- Recent Orders -->
+            <div class="content-card">
+                <div class="card-header">
+                    <h2>Recent Orders</h2>
+                    <a href="orders.php" class="btn btn-sm">View All</a>
+                </div>
+                
+                <div class="card-content">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>User</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($recentOrders as $order): ?>
+                            <tr>
+                                <td>#<?php echo $order['id']; ?></td>
+                                <td><?php echo $order['user_name']; ?></td>
+                                <td>$<?php echo number_format($order['total_amount'], 2); ?></td>
+                                <td>
+                                    <span class="status-badge status-<?php echo $order['status']; ?>">
+                                        <?php echo ucfirst($order['status']); ?>
+                                    </span>
+                                </td>
+                                <td><?php echo date('M j, Y', strtotime($order['created_at'])); ?></td>
+                                <td>
+                                    <a href="order-details.php?id=<?php echo $order['id']; ?>" class="btn btn-sm">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </body>

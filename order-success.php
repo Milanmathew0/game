@@ -5,6 +5,7 @@ require_once 'classes/Database.php';
 require_once 'classes/User.php';
 require_once 'classes/Order.php';
 require_once 'classes/Payment.php';
+require_once 'classes/Cart.php';
 
 // Initialize database connection
 $database = new Database();
@@ -14,6 +15,7 @@ $db = $database->getConnection();
 $user = new User($db);
 $order = new Order($db);
 $payment = new Payment($db);
+$cart = new Cart($db);
 
 // Check if user is logged in
 $isLoggedIn = isset($_SESSION['user_id']) ? true : false;
@@ -32,10 +34,10 @@ if(!isset($_GET['id'])) {
 
 // Get order details
 $order->id = $_GET['id'];
-$orderDetails = $order->getOrderById();
+$orderDetails = $order->getOrderById($_GET['id']);
 
 // Get payment details
-$paymentDetails = $payment->getPaymentByOrderId($order->id);
+$paymentDetails = $payment->getPaymentByOrderId($_GET['id']);
 
 // Check if order belongs to current user
 if($orderDetails['user_id'] != $_SESSION['user_id']) {

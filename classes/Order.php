@@ -7,7 +7,6 @@ class Order {
     public $id;
     public $user_id;
     public $total_amount;
-    public $payment_method;
     public $status;
     public $created;
     
@@ -16,45 +15,20 @@ class Order {
         $this->conn = $db;
     }
     
-    // Get total count of orders
-    public function getCount() {
-        $query = "SELECT COUNT(*) as total FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row['total'];
-    }
-    
-    // Get total revenue
-    public function getTotalRevenue() {
-        $query = "SELECT SUM(total_amount) as total FROM " . $this->table_name . " WHERE status = 'completed'";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row['total'] ? $row['total'] : 0;
-    }
-    
-    // Get recent orders
-    public function getRecentOrders($limit = 5) {
-        $query = "SELECT o.*, u.name as user_name 
-                 FROM " . $this->table_name . " o
-                 LEFT JOIN users u ON o.user_id = u.id
-                 ORDER BY o.created_at DESC LIMIT " . $limit;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
     // Create order
     public function createOrder() {
-        // Query to insert new order
-        $query = "INSERT INTO " . $this->table_name . " 
-                  SET user_id = :user_id, 
-                      total_amount = :total_amount, 
-                      status = :status, 
-                      created_at = NOW()";
-        
-        // Prepare query
+        try {
+            // Query to insert new order
+            $query = "INSERT INTO " . $this->table_name . " 
+                      SET user_id = :user_id, 
+                          total_amount = :total_amount, 
+                          status = :status, 
+                          created_at = NOW()";
+            
+            // Log the query and values
+            error_log("Creating order with: user_id = " . $this->user_id . ", total_amount = " . $this->total_amount . ", status = " . $this->status);
+            
+            // Prepare query
         $stmt = $this->conn->prepare($query);
         
         // Sanitize inputs
@@ -71,10 +45,16 @@ class Order {
         if($stmt->execute()) {
             // Get last inserted ID
             $this->id = $this->conn->lastInsertId();
+            error_log("Order created successfully with ID: " . $this->id);
             return true;
         }
         
+        error_log("Failed to create order: " . implode(", ", $stmt->errorInfo()));
         return false;
+    } catch (Exception $e) {
+        error_log("Exception creating order: " . $e->getMessage());
+        return false;
+    }
     }
     
     // Get order by ID
@@ -111,59 +91,17 @@ class Order {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
     
-    // Read all orders for admin
-    public function readAll() {
-        $query = "SELECT o.*, u.name as user_name, u.email as user_email, p.payment_method 
-                 FROM " . $this->table_name . " o
-                 LEFT JOIN users u ON o.user_id = u.id
-                 LEFT JOIN payments p ON p.order_id = o.id
-                 ORDER BY o.created_at DESC";
-                 
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    // Read one order with details
-    public function readOne() {
-        $query = "SELECT o.*, u.name as user_name, u.email as user_email, p.payment_method 
-                 FROM " . $this->table_name . " o
-                 LEFT JOIN users u ON o.user_id = u.id
-                 LEFT JOIN payments p ON p.order_id = o.id
-                 WHERE o.id = ?
-                 LIMIT 0,1";
-                 
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(1, $this->id);
-        $stmt->execute();
-        
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-    
-    // Get order items
-    public function getOrderItems() {
-        $query = "SELECT oi.*, g.title as game_title 
-                 FROM order_items oi
-                 LEFT JOIN games g ON oi.game_id = g.id
-                 WHERE oi.order_id = ?";
-                 
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(1, $this->id);
-        $stmt->execute();
-        
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
     // Update order status
     public function updateStatus() {
-        $query = "UPDATE " . $this->table_name . "
-                 SET status = :status
-                 WHERE id = :id";
-                 
+        // Query to update order status
+        $query = "UPDATE " . $this->table_name . " 
+                  SET status = :status 
+                  WHERE id = :id";
+        
+        // Prepare query
         $stmt = $this->conn->prepare($query);
         
-        // Sanitize
+        // Sanitize inputs
         $this->status = htmlspecialchars(strip_tags($this->status));
         $this->id = htmlspecialchars(strip_tags($this->id));
         
@@ -178,4 +116,59 @@ class Order {
         
         return false;
     }
-}
+
+    // Get recent orders with user details
+    public function getRecentOrders($limit = 5) {
+        // Query to get recent orders with user details
+        $query = "SELECT o.*, u.name as user_name 
+                 FROM " . $this->table_name . " o
+                 LEFT JOIN users u ON o.user_id = u.id
+                 ORDER BY o.created_at DESC 
+                 LIMIT " . $limit;
+        
+        // Prepare query
+        $stmt = $this->conn->prepare($query);
+        
+        // Execute query
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    // Get order statistics
+    public function getOrderStats() {
+        // Query to get order counts by status
+        $query = "SELECT 
+                    COUNT(*) as total_orders,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_orders,
+                    SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing_orders,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_orders,
+                    SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_orders
+                 FROM " . $this->table_name;
+        
+        // Prepare query
+        $stmt = $this->conn->prepare($query);
+        
+        // Execute query
+        $stmt->execute();
+        
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+    
+    // Get total revenue
+    public function getTotalRevenue() {
+        // Query to get total revenue from completed orders
+        $query = "SELECT COALESCE(SUM(total_amount), 0) as total_revenue 
+                 FROM " . $this->table_name . "
+                 WHERE status = 'completed'";
+        
+        // Prepare query
+        $stmt = $this->conn->prepare($query);
+        
+        // Execute query
+        $stmt->execute();
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total_revenue'];
+    }
+}?>

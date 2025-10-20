@@ -62,7 +62,7 @@ $userDetails = $user->getUserById($_SESSION['user_id']);
                     <form action="payment.php" method="post">
                         <div class="form-group">
                             <label for="name">Full Name</label>
-                            <input type="text" id="name" name="name" class="form-control" value="<?php echo $userDetails['username']; ?>" required>
+                            <input type="text" id="name" name="name" class="form-control" value="<?php echo $userDetails['name']; ?>" required>
                         </div>
                         
                         <div class="form-group">
@@ -103,15 +103,15 @@ $userDetails = $user->getUserById($_SESSION['user_id']);
                         <div class="order-summary">
                             <div class="order-item">
                                 <span>Subtotal:</span>
-                                <span>$<?php echo number_format($cartTotal, 2); ?></span>
+                                <span>₹<?php echo number_format($cartTotal, 2); ?></span>
                             </div>
                             <div class="order-item">
                                 <span>Tax (10%):</span>
-                                <span>$<?php echo number_format($cartTotal * 0.1, 2); ?></span>
+                                <span>₹<?php echo number_format($cartTotal * 0.1, 2); ?></span>
                             </div>
                             <div class="order-total">
                                 <span>Total:</span>
-                                <span>$<?php echo number_format($cartTotal * 1.1, 2); ?></span>
+                                <span>₹<?php echo number_format($cartTotal * 1.1, 2); ?></span>
                             </div>
                         </div>
                         
@@ -131,7 +131,7 @@ $userDetails = $user->getUserById($_SESSION['user_id']);
                         <div class="order-item-details">
                             <h3><?php echo $item['title']; ?></h3>
                             <p>Quantity: <?php echo $item['quantity']; ?></p>
-                            <p class="price">$<?php echo number_format($item['price'] * $item['quantity'], 2); ?></p>
+                            <p class="price">₹<?php echo number_format($item['price'] * $item['quantity'], 2); ?></p>
                         </div>
                     </div>
                     <?php endforeach; ?>

@@ -57,7 +57,7 @@ if(isset($_GET['search']) && !empty($_GET['search'])) {
                         <img src="<?php echo $gameItem['image']; ?>" alt="<?php echo $gameItem['title']; ?>">
                         <div class="game-info">
                             <h3><?php echo $gameItem['title']; ?></h3>
-                            <p class="price">$<?php echo $gameItem['price']; ?></p>
+                            <p class="price">₹<?php echo $gameItem['price']; ?></p>
                             <p class="description"><?php echo substr($gameItem['description'], 0, 100); ?>...</p>
                             <div class="game-actions">
                                 <a href="game-details.php?id=<?php echo $gameItem['id']; ?>" class="btn btn-info">Details</a>

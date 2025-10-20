@@ -9,8 +9,6 @@ class User {
     public $email;
     public $password;
     public $created;
-    public $is_admin = 0;
-    public $name;
     
     // Constructor
     public function __construct($db) {
@@ -110,116 +108,6 @@ class User {
         // Execute query
         $stmt->execute();
         
-        return $stmt;
-    }
-    
-    // Get total count of users
-    public function getCount() {
-        $query = "SELECT COUNT(*) as total FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row['total'];
-    }
-    
-    // Read all users
-    public function readAll() {
-        $query = "SELECT * FROM " . $this->table_name . " ORDER BY name";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    // Delete user
-    public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        
-        // Sanitize input
-        $this->id = htmlspecialchars(strip_tags($this->id));
-        
-        // Bind value
-        $stmt->bindParam(1, $this->id);
-        
-        // Execute query
-        if($stmt->execute()) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    // Toggle admin status
-    public function toggleAdminStatus() {
-        // First get current status
-        $query = "SELECT is_admin FROM " . $this->table_name . " WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(1, $this->id);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if($row) {
-            $new_status = ($row['is_admin'] == 1) ? 0 : 1;
-            
-            // Update status
-            $query = "UPDATE " . $this->table_name . " SET is_admin = ? WHERE id = ?";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(1, $new_status);
-            $stmt->bindParam(2, $this->id);
-            
-            if($stmt->execute()) {
-                return true;
-            }
-        }
-        
-        return false;
-    }
-    
-    // Check if user is admin and login
-    public function checkAdminLogin($password) {
-        // Query to check if email exists and user is admin
-        $query = "SELECT id, name, password, is_admin 
-                  FROM " . $this->table_name . " 
-                  WHERE email = :email 
-                  LIMIT 0,1";
-        
-        // Prepare query
-        $stmt = $this->conn->prepare($query);
-        
-        // Bind value
-        $stmt->bindParam(":email", $this->email);
-        
-        // Execute query
-        $stmt->execute();
-        
-        // Get row count
-        $num = $stmt->rowCount();
-        
-        // If email exists, check password and admin status
-        if($num > 0) {
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            // Verify password and check if user is admin
-            if(password_verify($password, $row['password']) && isset($row['is_admin']) && $row['is_admin'] == 1) {
-                // Set user properties
-                $this->id = $row['id'];
-                $this->name = $row['name'];
-                
-                return true;
-            }
-        }
-        
-        return false;
-        
-        // Sanitize input
-        $this->email = htmlspecialchars(strip_tags($this->email));
-        
-        // Bind value
-        $stmt->bindParam(1, $this->email);
-        
-        // Execute query
-        $stmt->execute();
-        
         // Get row count
         $num = $stmt->rowCount();
         
@@ -229,6 +117,21 @@ class User {
         }
         
         return false;
+    }
+    
+    // Get total number of users
+    public function getTotalUsers() {
+        // Query to get total users
+        $query = "SELECT COUNT(*) as total FROM " . $this->table_name;
+        
+        // Prepare query
+        $stmt = $this->conn->prepare($query);
+        
+        // Execute query
+        $stmt->execute();
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'];
     }
     
     // Get user details by ID

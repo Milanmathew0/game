@@ -8,167 +8,23 @@ class Game {
     public $title;
     public $description;
     public $price;
+    public $category_id;
     public $image;
-    public $category;
-    public $created;
-    
-    // Get total count of games
-    public function getCount() {
-        $query = "SELECT COUNT(*) as total FROM " . $this->table_name;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row['total'];
-    }
-    
-    // Get recent games
-    public function getRecentGames($limit = 5) {
-        $query = "SELECT * FROM " . $this->table_name . " ORDER BY created_at DESC LIMIT " . $limit;
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    // Read all games
-    public function read() {
-        $query = "SELECT * FROM " . $this->table_name . " ORDER BY title";
-        $stmt = $this->conn->prepare($query);
-        $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-    
-    // Read one game
-    public function readOne() {
-        $query = "SELECT * FROM " . $this->table_name . " WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        $stmt->bindParam(1, $this->id);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if($row) {
-            $this->title = $row['title'];
-            $this->description = $row['description'];
-            $this->price = $row['price'];
-            $this->image = $row['image'];
-            $this->category = $row['category'];
-            return true;
-        }
-        
-        return false;
-    }
-    
-    // Create game
-    public function create() {
-        $query = "INSERT INTO " . $this->table_name . " 
-                  SET title = :title, 
-                      description = :description, 
-                      price = :price, 
-                      image = :image, 
-                      category = :category, 
-                      created_at = NOW()";
-        
-        $stmt = $this->conn->prepare($query);
-        
-        // Sanitize inputs
-        $this->title = htmlspecialchars(strip_tags($this->title));
-        $this->description = htmlspecialchars(strip_tags($this->description));
-        $this->price = htmlspecialchars(strip_tags($this->price));
-        $this->image = htmlspecialchars(strip_tags($this->image));
-        $this->category = htmlspecialchars(strip_tags($this->category));
-        
-        // Bind values
-        $stmt->bindParam(":title", $this->title);
-        $stmt->bindParam(":description", $this->description);
-        $stmt->bindParam(":price", $this->price);
-        $stmt->bindParam(":image", $this->image);
-        $stmt->bindParam(":category", $this->category);
-        
-        // Execute query
-        if($stmt->execute()) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    // Update game
-    public function update() {
-        // If no image is uploaded, keep the existing one
-        if(empty($this->image)) {
-            $query = "UPDATE " . $this->table_name . " 
-                      SET title = :title, 
-                          description = :description, 
-                          price = :price, 
-                          category = :category 
-                      WHERE id = :id";
-        } else {
-            $query = "UPDATE " . $this->table_name . " 
-                      SET title = :title, 
-                          description = :description, 
-                          price = :price, 
-                          image = :image, 
-                          category = :category 
-                      WHERE id = :id";
-        }
-        
-        $stmt = $this->conn->prepare($query);
-        
-        // Sanitize inputs
-        $this->id = htmlspecialchars(strip_tags($this->id));
-        $this->title = htmlspecialchars(strip_tags($this->title));
-        $this->description = htmlspecialchars(strip_tags($this->description));
-        $this->price = htmlspecialchars(strip_tags($this->price));
-        $this->category = htmlspecialchars(strip_tags($this->category));
-        
-        // Bind values
-        $stmt->bindParam(":id", $this->id);
-        $stmt->bindParam(":title", $this->title);
-        $stmt->bindParam(":description", $this->description);
-        $stmt->bindParam(":price", $this->price);
-        $stmt->bindParam(":category", $this->category);
-        
-        // Bind image if it's set
-        if(!empty($this->image)) {
-            $this->image = htmlspecialchars(strip_tags($this->image));
-            $stmt->bindParam(":image", $this->image);
-        }
-        
-        // Execute query
-        if($stmt->execute()) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    // Delete game
-    public function delete() {
-        $query = "DELETE FROM " . $this->table_name . " WHERE id = ?";
-        $stmt = $this->conn->prepare($query);
-        
-        // Sanitize input
-        $this->id = htmlspecialchars(strip_tags($this->id));
-        
-        // Bind value
-        $stmt->bindParam(1, $this->id);
-        
-        // Execute query
-        if($stmt->execute()) {
-            return true;
-        }
-        
-        return false;
-    }
+    public $is_featured;
+    public $created_at;
     
     // Constructor
     public function __construct($db) {
         $this->conn = $db;
     }
     
-    // Get all games
+    // Get all games with category names
     public function getAllGames() {
-        // Query to get all games
-        $query = "SELECT * FROM " . $this->table_name . " ORDER BY created_at DESC";
+        // Query to get all games with category names
+        $query = "SELECT g.*, c.name as category_name 
+                  FROM " . $this->table_name . " g 
+                  LEFT JOIN categories c ON g.category_id = c.id 
+                  ORDER BY g.created_at DESC";
         
         // Prepare query
         $stmt = $this->conn->prepare($query);
@@ -191,6 +47,149 @@ class Game {
         $stmt->execute();
         
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    // Get total number of games
+    public function getTotalGames() {
+        // Query to get total games
+        $query = "SELECT COUNT(*) as total FROM " . $this->table_name;
+        
+        // Prepare query
+        $stmt = $this->conn->prepare($query);
+        
+        // Execute query
+        $stmt->execute();
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result['total'];
+    }
+    
+    // Create new game
+    public function createGame($data) {
+        // Query to insert new game
+        $query = "INSERT INTO " . $this->table_name . " 
+                  SET title = :title, 
+                      description = :description, 
+                      price = :price,
+                      image = :image,
+                      category_id = :category_id,
+                      is_featured = :is_featured,
+                      created_at = NOW()";
+        
+        // Prepare query
+        $stmt = $this->conn->prepare($query);
+        
+        // Sanitize inputs
+        $title = htmlspecialchars(strip_tags($data['title']));
+        $description = htmlspecialchars(strip_tags($data['description']));
+        $price = htmlspecialchars(strip_tags($data['price']));
+        $image = isset($data['image']) ? htmlspecialchars(strip_tags($data['image'])) : null;
+        $category_id = htmlspecialchars(strip_tags($data['category_id']));
+        $is_featured = isset($data['is_featured']) ? 1 : 0;
+        
+        // Bind values
+        $stmt->bindParam(":title", $title);
+        $stmt->bindParam(":description", $description);
+        $stmt->bindParam(":price", $price);
+        $stmt->bindParam(":image", $image);
+        $stmt->bindParam(":category_id", $category_id);
+        $stmt->bindParam(":is_featured", $is_featured);
+        
+        // Execute query
+        try {
+            if($stmt->execute()) {
+                return true;
+            }
+        } catch(PDOException $e) {
+            // Log error or handle it appropriately
+            error_log("Failed to create game: " . $e->getMessage());
+            return false;
+        }
+        return false;
+    }
+
+    // Update game
+    public function updateGame($data) {
+        // Build the query dynamically based on what data is provided
+        $fields = [];
+        $values = [];
+        
+        if(isset($data['title'])) {
+            $fields[] = "title = :title";
+            $values[':title'] = htmlspecialchars(strip_tags($data['title']));
+        }
+        
+        if(isset($data['description'])) {
+            $fields[] = "description = :description";
+            $values[':description'] = htmlspecialchars(strip_tags($data['description']));
+        }
+        
+        if(isset($data['price'])) {
+            $fields[] = "price = :price";
+            $values[':price'] = htmlspecialchars(strip_tags($data['price']));
+        }
+        
+        if(isset($data['image'])) {
+            $fields[] = "image = :image";
+            $values[':image'] = htmlspecialchars(strip_tags($data['image']));
+        }
+        
+        if(isset($data['category_id'])) {
+            $fields[] = "category_id = :category_id";
+            $values[':category_id'] = htmlspecialchars(strip_tags($data['category_id']));
+        }
+        
+        $fields[] = "is_featured = :is_featured";
+        $values[':is_featured'] = isset($data['is_featured']) ? 1 : 0;
+        
+        if(empty($fields)) {
+            return false; // Nothing to update
+        }
+        
+        // Build and prepare query
+        $query = "UPDATE " . $this->table_name . " SET " . implode(", ", $fields) . " WHERE id = :id";
+        $stmt = $this->conn->prepare($query);
+        
+        // Add ID to values
+        $values[':id'] = htmlspecialchars(strip_tags($data['id']));
+        
+        // Bind all values
+        foreach($values as $param => &$value) {
+            $stmt->bindParam($param, $value);
+        }
+        
+        // Execute query
+        try {
+            if($stmt->execute()) {
+                return true;
+            }
+        } catch(PDOException $e) {
+            // Log error or handle it appropriately
+            error_log("Failed to update game: " . $e->getMessage());
+            return false;
+        }
+        return false;
+    }
+
+    // Delete game
+    public function deleteGame($id) {
+        // Query to delete game
+        $query = "DELETE FROM " . $this->table_name . " WHERE id = ?";
+        
+        // Prepare query
+        $stmt = $this->conn->prepare($query);
+        
+        // Sanitize id
+        $id = htmlspecialchars(strip_tags($id));
+        
+        // Bind value
+        $stmt->bindParam(1, $id);
+        
+        // Execute query
+        if($stmt->execute()) {
+            return true;
+        }
+        return false;
     }
     
     // Get game by ID

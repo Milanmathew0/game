@@ -65,7 +65,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $payment->transaction_id = $payment->generateTransactionId();
                 $payment->status = 'completed';
                 
+                error_log("Processing payment: Order ID = " . $order->id . ", Amount = " . $total);
+                
                 if($payment->processPayment()) {
+                    error_log("Payment processed successfully");
                     // Update order status
                     $order->id = $order->id;
                     $order->status = 'completed';
@@ -175,15 +178,15 @@ $cartTotal = $cart->getCartTotal($_SESSION['user_id']);
                         <h3>Order Summary</h3>
                         <div class="order-item">
                             <span>Subtotal:</span>
-                            <span>$<?php echo number_format($cartTotal, 2); ?></span>
+                            <span>₹<?php echo number_format($cartTotal, 2); ?></span>
                         </div>
                         <div class="order-item">
                             <span>Tax (10%):</span>
-                            <span>$<?php echo number_format($cartTotal * 0.1, 2); ?></span>
+                            <span>₹<?php echo number_format($cartTotal * 0.1, 2); ?></span>
                         </div>
                         <div class="order-total">
                             <span>Total:</span>
-                            <span>$<?php echo number_format($cartTotal * 1.1, 2); ?></span>
+                            <span>₹<?php echo number_format($cartTotal * 1.1, 2); ?></span>
                         </div>
                     </div>
                     
@@ -227,7 +230,10 @@ $cartTotal = $cart->getCartTotal($_SESSION['user_id']);
                             
                             var fields = {
                                 'razorpay_payment_id': response.razorpay_payment_id,
-                                'amount': <?php echo $cartTotal; ?>
+                                'razorpay_order_id': response.razorpay_order_id,
+                                'razorpay_signature': response.razorpay_signature,
+                                'amount': <?php echo $cartTotal; ?>,
+                                'payment_method': 'razorpay'
                             };
                             
                             for (var key in fields) {

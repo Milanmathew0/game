@@ -13,7 +13,7 @@
         
         <div class="user-actions">
             <?php if($isLoggedIn): ?>
-                <a href="profile.php">My Account</a>
+                <a href="my-account.php">My Account</a>
                 <a href="logout.php">Logout</a>
             <?php else: ?>
                 <a href="login.php">Login</a>

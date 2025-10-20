@@ -52,6 +52,7 @@ if(isset($_POST['razorpay_payment_id']) && isset($_POST['razorpay_order_id']) &&
             $payment->status = 'completed';
             
             if($payment->processPayment()) {
+                error_log("Razorpay payment processed successfully: Payment ID = " . $paymentId . ", Order ID = " . $order->id);
                 // Clear cart
                 $cart->clearCart($_SESSION['user_id']);
                 
@@ -59,6 +60,7 @@ if(isset($_POST['razorpay_payment_id']) && isset($_POST['razorpay_order_id']) &&
                 header("Location: order-success.php?id=" . $order->id);
                 exit();
             } else {
+                error_log("Razorpay payment processing failed: Payment ID = " . $paymentId);
                 $error = "Payment processing failed. Please try again.";
             }
         } else {

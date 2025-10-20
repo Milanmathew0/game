@@ -35,13 +35,44 @@ $featuredGames = $game->getFeaturedGames();
     <?php include 'includes/header.php'; ?>
     
     <main>
-        <section class="hero">
-            <div class="hero-content">
-                <h1>Welcome to GameStore</h1>
-                <p>Your ultimate destination for the latest and greatest games</p>
-                <a href="#featured-games" class="btn">Explore Games</a>
-            </div>
-        </section>
+        <section class="hero" style="
+    background: url('https://www.cdmi.in/courses@2x/2D3D-Game-Design.webp') no-repeat center center/cover;
+    color: white;
+    height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+">
+    <div class="hero-content" style="
+        position: relative;
+        z-index: 2;
+        max-width: 600px;
+    ">
+        <h1 style="font-size: 3rem; margin-bottom: 1rem;">Welcome to GameStore</h1>
+        <p style="font-size: 1.2rem; margin-bottom: 2rem;">Your ultimate destination for the latest and greatest games</p>
+        <a href="#featured-games" class="btn" style="
+            background-color: #ff4500;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: 0.3s;
+        ">Explore Games</a>
+    </div>
+
+    <!-- Dark overlay -->
+    <div style="
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1;
+    "></div>
+</section>
+
 
         <section id="featured-games" class="featured-games">
             <div class="container">
@@ -52,7 +83,7 @@ $featuredGames = $game->getFeaturedGames();
                         <img src="<?php echo $game['image']; ?>" alt="<?php echo $game['title']; ?>">
                         <div class="game-info">
                             <h3><?php echo $game['title']; ?></h3>
-                            <p class="price">$<?php echo $game['price']; ?></p>
+                            <p class="price">₹<?php echo $game['price']; ?></p>
                             <p class="description"><?php echo substr($game['description'], 0, 100); ?>...</p>
                             <div class="game-actions">
                                 <a href="game-details.php?id=<?php echo $game['id']; ?>" class="btn btn-info">Details</a>
